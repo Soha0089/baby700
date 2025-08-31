@@ -1,99 +1,73 @@
 const axios = require("axios");
-const fs = require("fs-extra");
+const fs = require("fs");
 const path = require("path");
-const ytSearch = require("yt-search");
 
-const CACHE_FOLDER = path.join(__dirname, "cache");
-
-async function downloadAudio(videoId, filePath) {
-    const url = `https://mr-kshitizyt-hfhj.onrender.com/download?id=${videoId}`;
-    const writer = fs.createWriteStream(filePath);
-
-    const response = await axios({
-        url,
-        method: "GET",
-        responseType: "stream",
-    });
-
-    return new Promise((resolve, reject) => {
-        response.data.pipe(writer);
-        writer.on("finish", resolve);
-        writer.on("error", reject);
-    });
-}
-
-async function fetchAudioFromReply(api, event, message) {
-    const attachment = event.messageReply.attachments[0];
-    if (!attachment || (attachment.type !== "video" && attachment.type !== "audio")) {
-        throw new Error("Please reply to a valid video or audio attachment.");
-    }
-
-    const shortUrl = attachment.url;
-    const audioRecResponse = await axios.get(`https://audio-recon-ahcw.onrender.com/kshitiz?url=${encodeURIComponent(shortUrl)}`);
-    return audioRecResponse.data.title;
-}
-
-async function fetchAudioFromQuery(query) {
-    const searchResults = await ytSearch(query);
-    if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
-        return searchResults.videos[0].videoId;
-    } else {
-        throw new Error("No results found for the given query.");
-    }
-}
-
-async function handleAudioCommand(api, event, args, message) {
-    api.setMessageReaction("🕢", event.messageID, () => {}, true);
-
-    try {
-        let videoId;
-        let title = "";
-        if (event.messageReply && event.messageReply.attachments && event.messageReply.attachments.length > 0) {
-            title = await fetchAudioFromReply(api, event, message);
-            videoId = await fetchAudioFromQuery(title);
-        } else if (args.length > 0) {
-            const query = args.join(" ");
-            videoId = await fetchAudioFromQuery(query);
-            const searchResults = await ytSearch(query);
-            if (searchResults && searchResults.videos && searchResults.videos.length > 0) {
-                title = searchResults.videos[0].title;
-            } else {
-                throw new Error("No results found for the given query.");
-            }
-        } else {
-            message.reply("Please provide a query or reply to a valid video/audio attachment.");
-            return;
-        }
-
-        const filePath = path.join(CACHE_FOLDER, `${videoId}.mp3`);
-        await downloadAudio(videoId, filePath);
-
-        const audioStream = fs.createReadStream(filePath);
-        message.reply({ 
-            body: `✅𝙃𝙚𝙧𝙚'𝙨 𝙮𝙤𝙪𝙧 𝙨𝙤𝙣𝙜 𝙗𝙖𝙗𝙮 \n\n 🐤 | 𝗲𝙣𝙟𝙤𝙮 : ${title}`, 
-            attachment: audioStream 
-        });
-        api.setMessageReaction("🐤", event.messageID, () => {}, true);
-
-    } catch (error) {
-        console.error("Error:", error.message);
-        message.reply("An error occurred while processing your request.");
-    }
-}
+const baseApiUrl = async () => {
+  const base = await axios.get("https://raw.githubusercontent.com/Mostakim0978/D1PT0/refs/heads/main/baseApiUrl.json");
+  return base.data.api;
+};
 
 module.exports = {
-    config: {
-        name: "sing",
-        version: "1.0",
-        author: "It's Kshitiz",
-        countDown: 10,
-        role: 0,
-        shortDescription: "Download and send audio from YouTube.",
-        longDescription: "Download audio from YouTube based on a query or attachment.",
-        category: "music",
-        guide: "{p}audio [query] or reply to a video/audio attachment",
-    },
-    onStart: function ({ api, event, args, message }) {
-        return handleAudioCommand(api, event, args, message);
-    },
+  config: {
+    name: "sing",
+    version: "1.6",
+    author: "MahMUD",
+    countDown: 5,
+    role: 0,
+    category: "media",
+    guide: {
+      en: "{pn} sing mood"
+    }
+  },
+
+  onStart: async ({ api, args, event, message }) => {
+    const checkurl = /^(?:https?:\/\/)?(?:m\.|www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))((\w|-){11})(?:\S+)?$/;
+    let videoID, title;
+
+    try {
+      if (checkurl.test(args[0])) {
+        const match = args[0].match(checkurl);
+        videoID = match ? match[1] : null;
+      } else if (args.length > 0) {
+        const query = args.join(" ");
+        const res = await axios.get(`${await baseApiUrl()}/ytFullSearch?songName=${query}`);
+        const firstResult = res.data[0];
+        if (!firstResult) return api.sendMessage("❌ No results found for your query.", event.threadID, event.messageID);
+
+        videoID = firstResult.id;
+        title = firstResult.title;
+      } else {
+        return message.reply("Please provide a song name or a valid YouTube link.");
+      }
+
+      const {
+        data: { title: videoTitle, downloadLink, quality }
+      } = await axios.get(`${await baseApiUrl()}/ytDl3?link=${videoID}&format=mp3`);
+
+      const filePath = path.join(__dirname, "audio.mp3");
+      const audioBuffer = (await axios.get(downloadLink, { responseType: "arraybuffer" })).data;
+      fs.writeFileSync(filePath, Buffer.from(audioBuffer));
+
+      const audioStream = fs.createReadStream(filePath);
+      await api.sendMessage(
+        {
+          body: `✅ 𝙃𝙚𝙧𝙚'𝙨 𝙮𝙤𝙪𝙧 𝙨𝙤𝙣𝙜 𝙗𝙖𝙗𝙮\n\n🐤 | Enjoy: ${videoTitle || title}`,
+          attachment: audioStream
+        },
+        event.threadID,
+        () => fs.unlinkSync(filePath),
+        event.messageID
+      );
+
+      // Add the reaction 🕢 after sending the audio
+      api.setMessageReaction("🕢", event.messageID, () => {}, true);
+
+      // Optionally, you can still set the "🐤" reaction to indicate the song has been sent.
+      api.setMessageReaction("🐤", event.messageID, () => {}, true);
+
+    } catch (error) {
+      console.error("Error:", error.message);
+      api.sendMessage("❌ An error occurred while processing your request.", event.threadID, event.messageID);
+    }
+  }
 };
