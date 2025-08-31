@@ -12,7 +12,7 @@ module.exports = {
     version: "1.7",
     author: "Mah MUD",
     countDown: 10,
-    role: 0,
+    role: 2,
     category: "utility",
     whiteListModeThread: {
       whiteListThreadIds: [] // Store the whitelisted thread IDs
