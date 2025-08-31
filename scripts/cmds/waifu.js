@@ -1,8 +1,5 @@
-const fs = require("fs");
 const mongoose = require("mongoose");
-
-// Load waifu data
-const waifus = JSON.parse(fs.readFileSync("waifu.json", "utf-8"));
+const axios = require("axios");
 
 // MongoDB Connection
 mongoose.connect("mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0", {
@@ -15,79 +12,59 @@ const waifuWinSchema = new mongoose.Schema({
   userID: String,
   winCount: { type: Number, default: 0 }
 });
-
-// Model for Waifu Wins (Avoid OverwriteModelError)
 const WaifuWin = mongoose.models.WaifuWin || mongoose.model("WaifuWin", waifuWinSchema);
+
+// Base API URL
+const baseApiUrl = async () => {
+  const base = await axios.get("https://raw.githubusercontent.com/mahmudx7/exe/main/baseApiUrl.json");
+  return base.data.mahmud;
+};
 
 module.exports = {
   config: {
     name: "waifu",
-    version: "1.9",
+    version: "2.0",
     author: "MahMUD",
     countDown: 10,
     role: 0,
     category: "game",
     guide: {
-      en: "{pn}"
-    }
-  },
-
-  onReply: async function ({ api, event, Reply, usersData }) {
-    const { waifu, author } = Reply;
-    const getCoin = 1000;
-    const getExp = 121;
-    const penaltyCoin = 300;
-    const penaltyExp = 100;
-    const userData = await usersData.get(event.senderID);
-
-    if (event.senderID !== author) {
-        return api.sendMessage("𝐓𝐡𝐢𝐬 𝐢𝐬 𝐧𝐨𝐭 𝐲𝐨𝐮𝐫 𝐪𝐮𝐢𝐳 𝐛𝐚𝐛𝐲 >🐸", event.threadID, event.messageID);
-    }
-
-    if (event.type === "message_reply") {
-      const reply = event.body.toLowerCase();
-
-      if (isNaN(reply)) {
-        if (reply === waifu.toLowerCase()) {
-          try {
-            await api.unsendMessage(Reply.messageID);
-            await usersData.set(event.senderID, {
-              money: userData.money + getCoin,
-              exp: userData.exp + getExp
-            });
-
-            await WaifuWin.findOneAndUpdate(
-              { userID: event.senderID },
-              { $inc: { winCount: 1 } },
-              { upsert: true, new: true }
-            );
-
-            const message = `✅ | Correct answer! 🎉\nYou have earned ${getCoin} coins and ${getExp} exp.`;
-            await api.sendMessage(message, event.threadID, event.messageID);
-          } catch (err) {
-            console.log("Error: ", err.message);
-          }
-        } else {
-          await api.unsendMessage(Reply.messageID);
-          await usersData.set(event.senderID, {
-            money: userData.money - penaltyCoin,
-            exp: userData.exp - penaltyExp
-          });
-          await api.sendMessage(
-            `❌ | Wrong Answer!\nYou lost ${penaltyCoin} coins & ${penaltyExp} exp.\nCorrect answer was: ${waifu}`,
-            event.threadID,
-            event.messageID
-          );
-        }
-      }
+      en: "{pn} — play\n{pn} list — show leaderboard\n{pn} myrank — show your rank"
     }
   },
 
   onStart: async function ({ api, args, event, usersData }) {
+    const { senderID, threadID, messageID } = event;
+
     try {
-      const { senderID } = event;
-      const maxlimit = 15;
-      const waifuTimeLimit = 12 * 60 * 60 * 1000;
+      // 🏆 Show my rank
+      if (args[0] === "myrank") {
+        const stats = await WaifuWin.find().sort({ winCount: -1 });
+        const rank = stats.findIndex(entry => entry.userID === senderID) + 1;
+
+        if (rank === 0) return api.sendMessage("❌ | You haven't played yet.", threadID, messageID);
+        const userWins = stats[rank - 1].winCount;
+        return api.sendMessage(`📊 | Your Waifu Rank: #${rank}\n🥇 Wins: ${userWins}`, threadID, messageID);
+      }
+
+      // 🥇 Show leaderboard
+      if (args[0] === "list") {
+        const waifuStats = await WaifuWin.find().sort({ winCount: -1 });
+
+        if (waifuStats.length === 0) return api.sendMessage("No rankings available yet.", threadID, messageID);
+
+        let msg = "👑 | Waifu Game Rankings:\n\n";
+        let i = 0;
+        for (const stat of waifuStats.slice(0, 200)) {
+          const userName = await usersData.getName(stat.userID);
+          msg += `${++i}. ${userName}: ${stat.winCount} wins\n`;
+        }
+        return api.sendMessage(msg, threadID, messageID);
+      }
+
+      // ✅ Play Game
+      const maxlimit = 20;
+      const waifuTimeLimit = 10 * 60 * 60 * 1000;
       const currentTime = Date.now();
       const userData = await usersData.get(senderID);
 
@@ -105,59 +82,88 @@ module.exports = {
         const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
         const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
         return api.sendMessage(
-          `❌ | You have reached your waifu attempt limit (${maxlimit}).\nPlease try again in ${hoursLeft}h ${minutesLeft}m.`,
-          event.threadID,
-          event.messageID
+          `❌ | You have reached your waifu attempt limit (${maxlimit}). Try again in ${hoursLeft}h ${minutesLeft}m.`,
+          threadID,
+          messageID
         );
       }
 
-      if (!args[0]) {
-        userData.data.waifus.count++;
-        await usersData.set(senderID, userData);
+      userData.data.waifus.count++;
+      await usersData.set(senderID, userData);
 
-        const randomWaifu = waifus[Math.floor(Math.random() * waifus.length)];
+      const apiUrl = await baseApiUrl();
+      const response = await axios.get(`${apiUrl}/api/waifu`);
+      const { name, imgurLink } = response.data.waifu;
 
-        api.sendMessage(
-          { 
-            body: "A random waifu has appeared! Guess the waifu name.", 
-            attachment: await global.utils.getStreamFromURL(randomWaifu.imgurLink) 
-          },
-          event.threadID,
-          (error, info) => {
-            global.GoatBot.onReply.set(info.messageID, {
-              commandName: this.config.name,
-              type: "reply",
-              messageID: info.messageID,
-              author: event.senderID,
-              waifu: randomWaifu.name,
-              link: randomWaifu.imgurLink
-            });
-            setTimeout(() => {
-              api.unsendMessage(info.messageID);
-            }, 40000);
-          },
-          event.messageID
-        );
-      } else if (args[0] === "list") {
-        const waifuStats = await WaifuWin.find().sort({ winCount: -1 });
+      const imageStream = await axios({
+        url: imgurLink,
+        method: "GET",
+        responseType: "stream",
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
 
-        if (waifuStats.length === 0) {
-          return api.sendMessage("No rankings available yet.", event.threadID, event.messageID);
-        }
+      api.sendMessage(
+        {
+          body: "A random waifu has appeared! Guess the waifu name.",
+          attachment: imageStream.data
+        },
+        threadID,
+        (err, info) => {
+          global.GoatBot.onReply.set(info.messageID, {
+            commandName: this.config.name,
+            type: "reply",
+            messageID: info.messageID,
+            author: senderID,
+            waifu: name
+          });
 
-        let message = "👑 | Waifu Game Rankings:\n\n";
-        let i = 0;
-        for (const stat of waifuStats) {
-          const userName = await usersData.getName(stat.userID);
-          message += `${i + 1}. ${userName}: ${stat.winCount} wins\n`;
-          i++;
-        }
+          setTimeout(() => {
+            api.unsendMessage(info.messageID);
+          }, 40000);
+        },
+        messageID
+      );
 
-        return api.sendMessage(message, event.threadID, event.messageID);
-      }
     } catch (error) {
-      console.error(`Error: ${error.message}`);
-      api.sendMessage(`Error: ${error.message}`, event.threadID, event.messageID);
+      console.error("Waifu Error:", error);
+      api.sendMessage(`❌ Error: ${error.message}`, event.threadID, event.messageID);
+    }
+  },
+
+  onReply: async function ({ api, event, Reply, usersData }) {
+    const { waifu, author, messageID } = Reply;
+    const senderID = event.senderID;
+    const userData = await usersData.get(senderID);
+    const reply = event.body?.trim()?.toLowerCase();
+
+    if (senderID !== author) return api.sendMessage("❌ | This is not your waifu quiz, baby >🐸", event.threadID, event.messageID);
+    if (!reply) return;
+
+    const correct = reply === waifu.toLowerCase();
+    await api.unsendMessage(messageID);
+
+    if (correct) {
+      await usersData.set(senderID, {
+        money: userData.money + 1000,
+        exp: userData.exp + 121,
+        data: userData.data
+      });
+
+      await WaifuWin.findOneAndUpdate(
+        { userID: senderID },
+        { $inc: { winCount: 1 } },
+        { upsert: true, new: true }
+      );
+
+      api.sendMessage("✅ | Correct answer baby!\nYou've earned 1000 coins and 121 exp.", event.threadID, event.messageID);
+    } else {
+      await usersData.set(senderID, {
+        money: userData.money - 300,
+        exp: userData.exp - 100,
+        data: userData.data
+      });
+
+      api.sendMessage(`❌ | Wrong answer baby.\nYou lost 300 coins and 100 exp.\nCorrect answer: ${waifu}`, event.threadID, event.messageID);
     }
   }
 };
