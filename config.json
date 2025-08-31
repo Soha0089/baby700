@@ -53,7 +53,9 @@
   "whiteListModeThread": {
     "enable": true,
     "whiteListThreadIds": [
-      "7460623087375340"
+      "7460623087375340",
+      "1110891073796621",
+      "10029281837162153"
       
    ],
     "notes": "if you enable this feature, only the thread in the whiteListThreadIds list can use the bot",
