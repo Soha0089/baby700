@@ -73,7 +73,10 @@
 "10002307249845212",
 "9816702008396295",
    "9759607120826885",  
-    "9768866846568003"
+    "9768866846568003",
+"9703779603021745",
+"7404549806330418"
+      
     
     ],
     "notes": "if you enable this feature, only the thread in the whiteListThreadIds list can use the bot",
