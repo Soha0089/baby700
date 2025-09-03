@@ -225,4 +225,4 @@ async function getBotResponse(message) {
     console.error("API Error:", error.message || error);
     return "error janu 🥲";
   }
-          }
+                        }
