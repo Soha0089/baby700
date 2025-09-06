@@ -1,9 +1,9 @@
 module.exports = {
     config: {
         name: "balance",
-	aliases: ["money","bal"],
-        version: "1.2",
-        author: "NTKhang",
+        aliases: ["bal", "money"],
+        version: "1.3",
+        author: "NTKhang + MahMUD",
         countDown: 5,
         role: 0,
         description: {
@@ -25,71 +25,71 @@ module.exports = {
             moneyOf: "%1 đang có %2$"
         },
         en: {
-            money: "𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞 %1$",
+            money: ">🎀/n𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞: %1$",
             moneyOf: "%1 𝐡𝐚𝐬 %2$"
         }
     },
 
-    // Function to format money
+    // Format big numbers with units
     formatMoney(num) {
-        const units = ["", "𝐊", "𝐌", "𝐁", "𝐓", "𝐐", "𝐐𝐢", "𝐒𝐱", "𝐒𝐩", "𝐎𝐜", "𝐍", "𝐃", 
- "𝐔𝐧𝐝𝐞𝐜",
- "𝐃𝐮𝐨𝐝𝐞𝐜",
- "𝐓𝐫𝐞𝐝𝐞𝐜",
- "𝐐𝐮𝐚𝐭𝐭𝐮𝐨𝐫𝐝𝐞𝐜",
- "𝐐𝐮𝐢𝐧𝐝𝐞𝐜",
- "𝐒𝐞𝐱𝐝𝐞𝐜",
- "𝐒𝐞𝐩𝐭𝐞𝐧𝐝𝐞𝐜",
- "𝐎𝐜𝐭𝐨𝐝𝐞𝐜",
- "𝐍𝐨𝐯𝐞𝐦𝐝𝐞𝐜",
- "𝐕𝐢𝐠",
- "𝐔𝐧𝐯𝐢𝐠",
- "𝐃𝐮𝐨𝐯𝐢𝐠",
- "𝐓𝐫𝐞𝐬𝐯𝐢𝐠",
- "𝐐𝐮𝐚𝐭𝐭𝐮𝐨𝐫𝐯𝐢𝐠",
- "𝐐𝐮𝐢𝐧𝐯𝐢𝐠",
- "𝐒𝐞𝐬𝐯𝐢𝐠",
- "𝐒𝐞𝐩𝐭𝐞𝐦𝐯𝐢𝐠",
- "𝐎𝐜𝐭𝐨𝐯𝐢𝐠",
- "𝐍𝐨𝐯𝐞𝐦𝐯𝐢𝐠",
- "𝐓𝐫𝐢𝐠",
- "𝐔𝐧𝐭𝐫𝐢𝐠",
- "𝐃𝐮𝐨𝐭𝐫𝐢𝐠",
- "𝐆𝐨𝐨𝐠𝐨𝐥"];
+        const units = ["", "𝐊", "𝐌", "𝐁", "𝐓", "𝐐", "𝐐𝐢", "𝐒𝐱", "𝐒𝐩", "𝐎𝐜", "𝐍", "𝐃",
+            "𝐔𝐧𝐝𝐞𝐜", "𝐃𝐮𝐨𝐝𝐞𝐜", "𝐓𝐫𝐞𝐝𝐞𝐜", "𝐐𝐮𝐚𝐭𝐭𝐮𝐨𝐫𝐝𝐞𝐜", "𝐐𝐮𝐢𝐧𝐝𝐞𝐜",
+            "𝐒𝐞𝐱𝐝𝐞𝐜", "𝐒𝐞𝐩𝐭𝐞𝐧𝐝𝐞𝐜", "𝐎𝐜𝐭𝐨𝐝𝐞𝐜", "𝐍𝐨𝐯𝐞𝐦𝐝𝐞𝐜", "𝐕𝐢𝐠",
+            "𝐔𝐧𝐯𝐢𝐠", "𝐃𝐮𝐨𝐯𝐢𝐠", "𝐓𝐫𝐞𝐬𝐯𝐢𝐠", "𝐐𝐮𝐚𝐭𝐭𝐮𝐨𝐫𝐯𝐢𝐠", "𝐐𝐮𝐢𝐧𝐯𝐢𝐠",
+            "𝐒𝐞𝐬𝐯𝐢𝐠", "𝐒𝐞𝐩𝐭𝐞𝐦𝐯𝐢𝐠", "𝐎𝐜𝐭𝐨𝐯𝐢𝐠", "𝐍𝐨𝐯𝐞𝐦𝐯𝐢𝐠", "𝐓𝐫𝐢𝐠",
+            "𝐔𝐧𝐭𝐫𝐢𝐠", "𝐃𝐮𝐨𝐭𝐫𝐢𝐠", "𝐆𝐨𝐨𝐠𝐨𝐥"
+        ];
         let unit = 0;
         while (num >= 1000 && ++unit < units.length) num /= 1000;
-        return num.toFixed(1).replace(/\.0$/, "") + units[unit];
+        const formatted = num.toFixed(1).replace(/\.0$/, "") + units[unit];
+        return toBoldNumbers(formatted);
     },
 
     onStart: async function ({ message, usersData, event, getLang }) {
-        // If the event is a reply to another message
+        // Reply to another user's balance
         if (event.type == "message_reply") {
             const reply = event.messageReply;
-            const userID = reply.senderID;  // Get the ID of the user who sent the original message
+            const userID = reply.senderID;
             const userMoney = await usersData.get(userID, "money");
-
-            // Fetch the user's name (if available)
-            const userName = reply.senderName || await usersData.get(userID, "name") || "Unknown User"; 
-
-            // Respond with the money of the user who sent the original message
-            return message.reply(getLang("moneyOf", userName, this.formatMoney(userMoney)));
+            const userName = reply.senderName || await usersData.get(userID, "name") || "Unknown User";
+            return message.reply(getLang("moneyOf", toBoldUnicode(userName), this.formatMoney(userMoney)));
         }
 
-        // If there are mentions in the message
+        // Mentioned users
         if (Object.keys(event.mentions).length > 0) {
             const uids = Object.keys(event.mentions);
             let msg = "";
             for (const uid of uids) {
                 const userMoney = await usersData.get(uid, "money");
-                const userName = event.mentions[uid].replace("@", ""); // Get the name from the mention
-                msg += getLang("moneyOf", userName, this.formatMoney(userMoney)) + '\n';
+                const userName = event.mentions[uid].replace("@", "");
+                msg += getLang("moneyOf", toBoldUnicode(userName), this.formatMoney(userMoney)) + '\n';
             }
             return message.reply(msg);
         }
 
-        // If no mentions or replies, show the balance of the user who sent the message
+        // Sender's own balance
         const userData = await usersData.get(event.senderID);
-        const userName = event.senderName || await usersData.get(event.senderID, "name") || "Unknown User"; // Get the sender's name or fallback to "Unknown User"
+        const userName = event.senderName || await usersData.get(event.senderID, "name") || "Unknown User";
         return message.reply(getLang("money", this.formatMoney(userData.money)));
     }
 };
+
+// Convert to bold numbers
+function toBoldNumbers(number) {
+    const bold = { "0": "𝟎", "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗" };
+    return number.toString().split('').map(c => bold[c] || c).join('');
+}
+
+// Convert text to bold
+function toBoldUnicode(text) {
+    const bold = {
+        "a": "𝐚", "b": "𝐛", "c": "𝐜", "d": "𝐝", "e": "𝐞", "f": "𝐟", "g": "𝐠", "h": "𝐡", "i": "𝐢", "j": "𝐣",
+        "k": "𝐤", "l": "𝐥", "m": "𝐦", "n": "𝐧", "o": "𝐨", "p": "𝐩", "q": "𝐪", "r": "𝐫", "s": "𝐬", "t": "𝐭",
+        "u": "𝐮", "v": "𝐯", "w": "𝐰", "x": "𝐱", "y": "𝐲", "z": "𝐳",
+        "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
+        "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
+        "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙",
+        " ": " ", "'": "'", ",": ",", ".": ".", "-": "-"
+    };
+    return text.split('').map(c => bold[c] || c).join('');
+	}
