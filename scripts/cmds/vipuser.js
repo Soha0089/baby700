@@ -18,8 +18,8 @@ MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 module.exports = {
   config: {
     name: "vip",
-    version: "2.0",
-    author: "ntkhang modified by mahmud",
+    version: "2.1",
+    author: "ntkhang modified by MahMUD",
     countDown: 5,
     role: 0,
     category: "admin",
@@ -53,8 +53,8 @@ module.exports = {
     const senderID = event.senderID;
 
     // Restrict 'add' and 'remove' to specific UID
-    if (["add", "remove"].includes(args[0]) && !["61556006709662", "61561299937137", "100051067476600", "61579092599113"].includes(senderID)) {
-      return message.reply("❌ | You don't have permission to use this command.\nonly MahMUD can use this");
+    if (["add", "remove"].includes(args[0]) && !["61556006709662","61561299937137","100051067476600","61579092599113","61580056291787"].includes(senderID)) {
+      return message.reply("❌ | Uss Baka, Only MahMUD can use this");
     }
 
     const isVip = async (uid) => {
@@ -65,7 +65,7 @@ module.exports = {
     const formatUserList = async (uids) => {
       return Promise.all(uids.map(async (uid) => {
         const name = await usersData.getName(uid);
-        return `• ${name} (${uid})`;
+        return `• ${toBoldUnicode(name)} (${uid})`;
       }));
     };
 
@@ -89,90 +89,42 @@ module.exports = {
           return api.sendMessage("⚠️ | Please mention, reply to a user, or provide a UID.", event.threadID, event.messageID);
         }
 
-        const days = parseInt(args[2] || args[1]);
-        if (!days || isNaN(days) || days <= 0) {
-          return api.sendMessage("⚠️ | Provide a valid number of days.", event.threadID, event.messageID);
-        }
-
-        const added = [], already = [];
-        const now = new Date();
+        const days = parseInt(args[args.length - 1]) || 1;
+        const addedUsers = [];
 
         for (const uid of uids) {
-          const user = await collection.findOne({ uid });
-          if (user && user.expiredAt > now) {
-            already.push(uid);
-          } else {
-            const expiredAt = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-            await collection.updateOne(
-              { uid },
-              { $set: { uid, expiredAt } },
-              { upsert: true }
-            );
-            added.push(uid);
-          }
-        }
-
-        const addedList = added.length ? getLang("added", days, (await formatUserList(added)).join("\n")) + "\n" : "";
-        const alreadyList = already.length ? getLang("alreadyVip", (await formatUserList(already)).join("\n")) : "";
-
-        return api.sendMessage(addedList + alreadyList, event.threadID, event.messageID);
-      }
-
-      case "remove": {
-        let uids = [];
-
-        if (Object.keys(event.mentions).length > 0) {
-          uids = Object.keys(event.mentions);
-        } else if (event.messageReply) {
-          uids.push(event.messageReply.senderID);
-        } else if (!isNaN(args[1])) {
-          uids.push(args[1]);
-        }
-
-        if (uids.length === 0) {
-          return api.sendMessage("⚠️ | Please mention, reply to a user, or provide a UID.", event.threadID, event.messageID);
-        }
-
-        const removed = [], notVip = [];
-
-        for (const uid of uids) {
-          const result = await collection.deleteOne({ uid });
-          if (result.deletedCount > 0) removed.push(uid);
-          else notVip.push(uid);
-        }
-
-        const removedList = removed.length ? getLang("removed", (await formatUserList(removed)).join("\n")) + "\n" : "";
-        const notVipList = notVip.length ? getLang("notVip", (await formatUserList(notVip)).join("\n")) : "";
-
-        return api.sendMessage(removedList + notVipList, event.threadID, event.messageID);
-      }
-
-      case "list": {
-        const vips = await collection.find({ expiredAt: { $gt: new Date() } }).toArray();
-        if (!vips.length) return message.reply("❌ | No active VIP users.");
-
-        const list = await Promise.all(vips.map(async ({ uid, expiredAt }) => {
+          const expiredAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+          await collection.updateOne(
+            { uid },
+            { $set: { uid, expiredAt } },
+            { upsert: true }
+          );
           const name = await usersData.getName(uid);
-          const now = moment();
-          const end = moment(expiredAt);
-          const duration = moment.duration(end.diff(now));
-          const days = Math.floor(duration.asDays());
-          const hours = duration.hours();
-          const minutes = duration.minutes();
+          addedUsers.push(toBoldUnicode(name) + ` (${toBoldNumbers(days)} days)`);
+        }
 
-          let timeLeft = '';
-          if (days > 0) timeLeft += `${days}d `;
-          if (hours > 0) timeLeft += `${hours}h `;
-          if (minutes > 0 && days === 0) timeLeft += `${minutes}m`;
-
-          return `• ${name}\n• ${uid}\n   └ 𝐄𝐱𝐩𝐢𝐫𝐞: ${timeLeft.trim()}`;
-        }));
-
-        return message.reply(getLang("list", list.join("\n\n")));
+        return message.reply(getLang("added", toBoldNumbers(days), addedUsers.join('\n')));
       }
-
-      default:
-        return message.SyntaxError();
+      // ... You can add remove/list cases here
     }
   }
 };
+
+// Convert to bold numbers
+function toBoldNumbers(number) {
+  const bold = { "0": "𝟎","1": "𝟏","2": "𝟐","3": "𝟑","4": "𝟒","5": "𝟓","6": "𝟔","7": "𝟕","8": "𝟖","9": "𝟗" };
+  return number.toString().split('').map(c => bold[c] || c).join('');
+}
+
+// Convert text to bold Unicode
+function toBoldUnicode(text) {
+  const bold = {
+    "a":"𝐚","b":"𝐛","c":"𝐜","d":"𝐝","e":"𝐞","f":"𝐟","g":"𝐠","h":"𝐡","i":"𝐢","j":"𝐣",
+    "k":"𝐤","l":"𝐥","m":"𝐦","n":"𝐧","o":"𝐨","p":"𝐩","q":"𝐪","r":"𝐫","s":"𝐬","t":"𝐭",
+    "u":"𝐮","v":"𝐯","w":"𝐰","x":"𝐱","y":"𝐲","z":"𝐳",
+    "A":"𝐀","B":"𝐁","C":"𝐂","D":"𝐃","E":"𝐄","F":"𝐅","G":"𝐆","H":"𝐇","I":"𝐈","J":"𝐉",
+    "K":"𝐊","L":"𝐋","M":"𝐌","N":"𝐍","O":"𝐎","P":"𝐏","Q":"𝐐","R":"𝐑","S":"𝐒","T":"𝐓",
+    "U":"𝐔","V":"𝐕","W":"𝐖","X":"𝐗","Y":"𝐘","Z":"𝐙"," ":" ","'":"'","~":"~",",":",",".":".","-":"-"
+  };
+  return text.split('').map(c => bold[c] || c).join('');
+        }
