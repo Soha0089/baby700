@@ -18,7 +18,7 @@ MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 module.exports = {
   config: {
     name: "vip",
-    version: "2.2",
+    version: "2.3",
     author: "ntkhang modified by MahMUD",
     countDown: 5,
     role: 0,
@@ -56,16 +56,10 @@ module.exports = {
       return message.reply("❌ | You don't have permission to use this command.\nOnly MahMUD can use this");
     }
 
+    // Check if user is VIP
     const isVip = async (uid) => {
       const user = await collection.findOne({ uid });
       return user && user.expiredAt > new Date();
-    };
-
-    const formatUserList = async (uids) => {
-      return Promise.all(uids.map(async (uid) => {
-        const name = await usersData.getName(uid);
-        return `• ${toBoldUnicode(name)} (${uid})`;
-      }));
     };
 
     // VIP commands list
@@ -121,14 +115,19 @@ module.exports = {
         const vipUsers = await collection.find({}).toArray();
         if (vipUsers.length === 0) return message.reply("🎀 | No VIP users found!");
 
-        const activeVipUsers = vipUsers.filter(user => user.expiredAt > new Date());
-        const formattedUsers = await Promise.all(activeVipUsers.map(async user => {
+        // Filter active VIPs and sort by expiry descending
+        const activeVipUsers = vipUsers
+          .filter(user => user.expiredAt > new Date())
+          .sort((a, b) => new Date(b.expiredAt) - new Date(a.expiredAt));
+
+        let listMessage = "👑 | List of VIP user role\n\n";
+        for (const user of activeVipUsers) {
           const name = await usersData.getName(user.uid);
           const expDate = moment(user.expiredAt).tz("Asia/Dhaka").format("DD/MM/YYYY");
-          return `• ${toBoldUnicode(name)} (${toBoldNumbers(user.uid)} | expires: ${expDate})`;
-        }));
+          listMessage += `╭‣ ${toBoldUnicode(name)} \n╰‣ expires: ${expDate}\n`;
+        }
 
-        return message.reply(getLang("list", formattedUsers.join('\n')));
+        return message.reply(listMessage);
       }
     }
   }
@@ -151,4 +150,4 @@ function toBoldUnicode(text) {
     "U":"𝐔","V":"𝐕","W":"𝐖","X":"𝐗","Y":"𝐘","Z":"𝐙"," ":" ","'":"'","~":"~",",":",",".":".","-":"-"
   };
   return text.split('').map(c => bold[c] || c).join('');
-          }
+}
