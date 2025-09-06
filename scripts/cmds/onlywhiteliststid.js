@@ -1,6 +1,20 @@
 const { config } = global.GoatBot;
 const { client } = global;
 const { writeFileSync } = require("fs-extra");
+const { MongoClient } = require("mongodb"); // ✅ REQUIRED!
+
+const uri = 'mongodb+srv://mahmudabdullax7:ttnRAhj81JikbEw8@cluster0.zwknjau.mongodb.net/GoatBotV2?retryWrites=true&w=majority&appName=Cluster0';
+const dbName = 'vipUser';
+
+let db;
+MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(client => {
+    console.log('Connected to MongoDB');
+    db = client.db(dbName);
+  })
+  .catch(err => {
+    console.error('Error connecting to MongoDB:', err);
+  });
 
 module.exports = {
 	config: {
@@ -40,12 +54,21 @@ module.exports = {
 	},
 
 	onStart: async function ({ message, args, event, getLang, api }) {
-		const vipData = global.GoatBot.config.vipUser;
-			if (!vipData.includes(event.senderID)) {
-				api.sendMessage(
-					"🐤 | Moye Moye\n\n❌ | You are not a vipUser only vipUser use this command", event.threadID, event.messageID);
-				return; // Exit the function to prevent the command from executing	
-			}
+		if (!db) {
+      return api.sendMessage("❌ | Database connection is not initialized.", event.threadID, event.messageID);
+    }
+
+    // VIP check function
+    const checkVip = async (uid) => {
+      const collection = db.collection("vipUser");
+      const user = await collection.findOne({ uid });
+      return user && user.expiredAt > new Date();
+    };
+
+    const isVip = await checkVip(event.senderID);
+    if (!isVip) {
+      return api.sendMessage("🥹 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐚𝐫𝐞 𝐧𝐨𝐭 𝐚 𝐕𝐈𝐏 𝐮𝐬𝐞𝐫.", event.threadID, event.messageID);
+    }
 		
 		switch (args[0]) {
 			case "add":
