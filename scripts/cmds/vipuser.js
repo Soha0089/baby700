@@ -18,7 +18,7 @@ MongoClient.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
 module.exports = {
   config: {
     name: "vip",
-    version: "2.1",
+    version: "2.2",
     author: "ntkhang modified by MahMUD",
     countDown: 5,
     role: 0,
@@ -48,13 +48,12 @@ module.exports = {
 
   onStart: async function ({ message, args, event, usersData, api, getLang }) {
     if (!db) return message.reply("❌ | Database connection is not initialized.");
-
     const collection = db.collection("vipUser");
     const senderID = event.senderID;
 
     // Restrict 'add' and 'remove' to specific UID
     if (["add", "remove"].includes(args[0]) && !["61556006709662","61561299937137","100051067476600","61579092599113","61580056291787"].includes(senderID)) {
-      return message.reply("❌ | Uss Baka, Only MahMUD can use this");
+      return message.reply("❌ | You don't have permission to use this command.\nOnly MahMUD can use this");
     }
 
     const isVip = async (uid) => {
@@ -69,6 +68,7 @@ module.exports = {
       }));
     };
 
+    // VIP commands list
     if ((args[0] === "cmd" || args[0] === "command") && event.senderID) {
       return message.reply(getLang("vipServices"));
     }
@@ -76,43 +76,67 @@ module.exports = {
     switch (args[0]) {
       case "add": {
         let uids = [];
+        if (Object.keys(event.mentions).length > 0) uids = Object.keys(event.mentions);
+        else if (event.messageReply) uids.push(event.messageReply.senderID);
+        else if (!isNaN(args[1])) uids.push(args[1]);
 
-        if (Object.keys(event.mentions).length > 0) {
-          uids = Object.keys(event.mentions);
-        } else if (event.messageReply) {
-          uids.push(event.messageReply.senderID);
-        } else if (!isNaN(args[1])) {
-          uids.push(args[1]);
-        }
-
-        if (uids.length === 0) {
-          return api.sendMessage("⚠️ | Please mention, reply to a user, or provide a UID.", event.threadID, event.messageID);
-        }
+        if (uids.length === 0) return api.sendMessage("⚠️ | Please mention, reply to a user, or provide a UID.", event.threadID, event.messageID);
 
         const days = parseInt(args[args.length - 1]) || 1;
         const addedUsers = [];
 
         for (const uid of uids) {
           const expiredAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
-          await collection.updateOne(
-            { uid },
-            { $set: { uid, expiredAt } },
-            { upsert: true }
-          );
+          await collection.updateOne({ uid }, { $set: { uid, expiredAt } }, { upsert: true });
           const name = await usersData.getName(uid);
           addedUsers.push(toBoldUnicode(name) + ` (${toBoldNumbers(days)} days)`);
         }
 
         return message.reply(getLang("added", toBoldNumbers(days), addedUsers.join('\n')));
       }
-      // ... You can add remove/list cases here
+
+      case "remove": {
+        let uids = [];
+        if (Object.keys(event.mentions).length > 0) uids = Object.keys(event.mentions);
+        else if (event.messageReply) uids.push(event.messageReply.senderID);
+        else if (!isNaN(args[1])) uids.push(args[1]);
+
+        if (uids.length === 0) return api.sendMessage("⚠️ | Please mention, reply to a user, or provide a UID.", event.threadID, event.messageID);
+
+        const removedUsers = [];
+        for (const uid of uids) {
+          const user = await collection.findOne({ uid });
+          if (user) {
+            await collection.deleteOne({ uid });
+            const name = await usersData.getName(uid);
+            removedUsers.push(toBoldUnicode(name));
+          }
+        }
+
+        if (removedUsers.length === 0) return message.reply(getLang("notVip", "No VIP users found to remove"));
+        return message.reply(getLang("removed", removedUsers.join('\n')));
+      }
+
+      case "list": {
+        const vipUsers = await collection.find({}).toArray();
+        if (vipUsers.length === 0) return message.reply("🎀 | No VIP users found!");
+
+        const activeVipUsers = vipUsers.filter(user => user.expiredAt > new Date());
+        const formattedUsers = await Promise.all(activeVipUsers.map(async user => {
+          const name = await usersData.getName(user.uid);
+          const expDate = moment(user.expiredAt).tz("Asia/Dhaka").format("DD/MM/YYYY");
+          return `• ${toBoldUnicode(name)} (${toBoldNumbers(user.uid)} | expires: ${expDate})`;
+        }));
+
+        return message.reply(getLang("list", formattedUsers.join('\n')));
+      }
     }
   }
 };
 
-// Convert to bold numbers
+// Convert numbers to bold
 function toBoldNumbers(number) {
-  const bold = { "0": "𝟎","1": "𝟏","2": "𝟐","3": "𝟑","4": "𝟒","5": "𝟓","6": "𝟔","7": "𝟕","8": "𝟖","9": "𝟗" };
+  const bold = { "0":"𝟎","1":"𝟏","2":"𝟐","3":"𝟑","4":"𝟒","5":"𝟓","6":"𝟔","7":"𝟕","8":"𝟖","9":"𝟗" };
   return number.toString().split('').map(c => bold[c] || c).join('');
 }
 
@@ -127,4 +151,4 @@ function toBoldUnicode(text) {
     "U":"𝐔","V":"𝐕","W":"𝐖","X":"𝐗","Y":"𝐘","Z":"𝐙"," ":" ","'":"'","~":"~",",":",",".":".","-":"-"
   };
   return text.split('').map(c => bold[c] || c).join('');
-        }
+          }
