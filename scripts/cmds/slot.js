@@ -40,12 +40,12 @@ module.exports = {
       invalid_amount: "Enter a valid and positive amount to have a chance to win double",
       not_enough_money: "𝐂𝐡𝐞𝐜𝐤 𝐲𝐨𝐮𝐫 𝐛𝐚𝐥𝐚𝐧𝐜𝐞 𝐢𝐟 𝐲𝐨𝐮 𝐡𝐚𝐯𝐞 𝐭𝐡𝐚𝐭 𝐚𝐦𝐨𝐮𝐧𝐭",
       spin_message: "Spinning...",
-      win_message: "• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐰𝐨𝐧 $%1",
-      lose_message: "• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐥𝐨𝐬𝐭 $%1",
+      win_message: "• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐰𝐨𝐧 %1$",
+      lose_message: "• 𝐁𝐚𝐛𝐲, 𝐘𝐨𝐮 𝐥𝐨𝐬𝐭 %1$",
       jackpot_message: "𝐉𝐚𝐜𝐤𝐩𝐨𝐭! 𝐘𝐨𝐮 𝐰𝐨𝐧 $%1 𝐰𝐢𝐭𝐡 𝐭𝐡𝐫𝐞𝐞 %2 𝐬𝐲𝐦𝐛𝐨𝐥𝐬, 𝐁𝐚𝐛𝐲!",
       spin_count: ">🎀",
       wrong_use_message: "❌ | 𝐏𝐥𝐞𝐚𝐬𝐞 𝐞𝐧𝐭𝐞𝐫 𝐚 𝐯𝐚𝐥𝐢𝐝 𝐚𝐧𝐝 𝐩𝐨𝐬𝐢𝐭𝐢𝐯𝐞 𝐧𝐮𝐦𝐛𝐞𝐫 𝐚𝐬 𝐲𝐨𝐮𝐫 𝐛𝐞𝐭 𝐚𝐦𝐨𝐮𝐧𝐭.",
-      time_left_message: "❌ | 𝐘𝐨𝐮 𝐡𝐚𝐯𝐞 𝐫𝐞𝐚𝐜𝐡𝐞𝐝 𝐲𝐨𝐮𝐫 𝐬𝐥𝐨𝐭 𝐥𝐢𝐦𝐢𝐭. 𝐓𝐫𝐲 𝐚𝐠𝐚𝐢𝐧 𝐢𝐧 %1𝐡 %2𝐦.",
+      time_left_message: "❌ | 𝐁𝐚𝐛𝐲, 𝐲𝐨𝐮 𝐡𝐚𝐯𝐞 𝐫𝐞𝐚𝐜𝐡𝐞𝐝 𝐲𝐨𝐮𝐫 𝐬𝐥𝐨𝐭 𝐥𝐢𝐦𝐢𝐭. 𝐓𝐫𝐲 𝐚𝐠𝐚𝐢𝐧 𝐢𝐧 %1𝐡 %2𝐦.",
       max_bet_exceeded: "❌ | The maximum bet amount is 10M.",
     },
   },
@@ -58,10 +58,10 @@ module.exports = {
         return api.sendMessage("❌ | No one has played the slot game yet!", threadID, messageID);
       }
 
-      let msg = "👑 Slot Game Rankings:\n\n";
+      let msg = "👑 𝐒𝐥𝐨𝐭 𝐆𝐚𝐦𝐞 𝐑𝐚𝐧𝐤𝐢𝐧𝐠𝐬:\n\n";
       for (let i = 0; i < stats.length; i++) {
         const name = await usersData.getName(stats[i].userID);
-        msg += `${i + 1}. ${name}: win ${stats[i].winCount} / lost ${stats[i].lossCount}\n`;
+        msg += `${toBoldNumbers(i + 1)}. ${toBoldUnicode(name)} → 𝐖𝐢𝐧𝐬: ${toBoldNumbers(stats[i].winCount)} / 𝐋𝐨𝐬𝐬𝐞𝐬: ${toBoldNumbers(stats[i].lossCount)}\n`;
       }
 
       return api.sendMessage(msg, threadID, messageID);
@@ -76,7 +76,11 @@ module.exports = {
       }
 
       const myStats = allStats[rank - 1];
-      return api.sendMessage(`📊 | Your Slot Game Rank:\n🏅 Rank: #${rank}\n• Wins: ${myStats.winCount}\n• Losses: ${myStats.lossCount}`, threadID, messageID);
+      return api.sendMessage(
+        `📊 | 𝐘𝐨𝐮𝐫 𝐒𝐥𝐨𝐭 𝐆𝐚𝐦𝐞 𝐑𝐚𝐧𝐤:\n🏅 𝐑𝐚𝐧𝐤: #${toBoldNumbers(rank)}\n• 𝐖𝐢𝐧𝐬: ${toBoldNumbers(myStats.winCount)}\n• 𝐋𝐨𝐬𝐬𝐞𝐬: ${toBoldNumbers(myStats.lossCount)}`,
+        threadID,
+        messageID
+      );
     }
 
     const maxlimit = 20;
@@ -100,7 +104,7 @@ module.exports = {
       const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
       const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
       return api.sendMessage(
-        getLang("time_left_message", hoursLeft, minutesLeft),
+        getLang("time_left_message", toBoldNumbers(hoursLeft), toBoldNumbers(minutesLeft)),
         threadID,
         messageID
       );
@@ -150,6 +154,31 @@ module.exports = {
   },
 };
 
+// ========================
+// Utility Functions
+// ========================
+
+// Bold numbers
+function toBoldNumbers(number) {
+  const bold = { "0": "𝟎", "1": "𝟏", "2": "𝟐", "3": "𝟑", "4": "𝟒", "5": "𝟓", "6": "𝟔", "7": "𝟕", "8": "𝟖", "9": "𝟗" };
+  return number.toString().split('').map(c => bold[c] || c).join('');
+}
+
+// Bold text
+function toBoldUnicode(text) {
+  const bold = {
+    "a": "𝐚", "b": "𝐛", "c": "𝐜", "d": "𝐝", "e": "𝐞", "f": "𝐟", "g": "𝐠", "h": "𝐡", "i": "𝐢", "j": "𝐣",
+    "k": "𝐤", "l": "𝐥", "m": "𝐦", "n": "𝐧", "o": "𝐨", "p": "𝐩", "q": "𝐪", "r": "𝐫", "s": "𝐬", "t": "𝐭",
+    "u": "𝐮", "v": "𝐯", "w": "𝐰", "x": "𝐱", "y": "𝐲", "z": "𝐳",
+    "A": "𝐀", "B": "𝐁", "C": "𝐂", "D": "𝐃", "E": "𝐄", "F": "𝐅", "G": "𝐆", "H": "𝐇", "I": "𝐈", "J": "𝐉",
+    "K": "𝐊", "L": "𝐋", "M": "𝐌", "N": "𝐍", "O": "𝐎", "P": "𝐏", "Q": "𝐐", "R": "𝐑", "S": "𝐒", "T": "𝐓",
+    "U": "𝐔", "V": "𝐕", "W": "𝐖", "X": "𝐗", "Y": "𝐘", "Z": "𝐙",
+    " ": " ", "'": "'", ",": ",", ".": ".", "-": "-"
+  };
+  return text.split('').map(c => bold[c] || c).join('');
+}
+
+// Winnings calculation
 function calculateWinnings(slot1, slot2, slot3, betAmount) {
   if (slot1 === "❤" && slot2 === "❤" && slot3 === "❤") {
     return betAmount * 10;
@@ -164,18 +193,20 @@ function calculateWinnings(slot1, slot2, slot3, betAmount) {
   }
 }
 
+// Spin result message
 function getSpinResultMessage(slot1, slot2, slot3, winnings, getLang) {
   if (winnings > 0) {
     if (slot1 === "❤" && slot2 === "❤" && slot3 === "❤") {
       return getLang("jackpot_message", formatMoney(winnings), "❤");
     } else {
-      return getLang("win_message", formatMoney(winnings)) + `\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${slot1} | ${slot2} | ${slot3} ]`;
+      return getLang("win_message", formatMoney(winnings)) + `\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬: [ ${slot1} | ${slot2} | ${slot3} ]`;
     }
   } else {
-    return getLang("lose_message", formatMoney(-winnings)) + `\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬 [ ${slot1} | ${slot2} | ${slot3} ]`;
+    return getLang("lose_message", formatMoney(-winnings)) + `\n• 𝐆𝐚𝐦𝐞 𝐑𝐞𝐬𝐮𝐥𝐭𝐬: [ ${slot1} | ${slot2} | ${slot3} ]`;
   }
 }
 
+// Format money with bold
 function formatMoney(num) {
   const units = ["", "𝐊", "𝐌", "𝐁", "𝐓", "𝐐", "𝐐𝐢", "𝐒𝐱", "𝐒𝐩", "𝐎𝐜", "𝐍", "𝐃"];
   let unit = 0;
@@ -185,5 +216,5 @@ function formatMoney(num) {
     unit++;
   }
 
-  return Number(num.toFixed(1)) + units[unit];
-      }
+  return toBoldNumbers(Number(num.toFixed(1))) + units[unit];
+}
